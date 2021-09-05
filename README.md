@@ -17,3 +17,8 @@ Lightshots method of storing images is awful, to find literally anyones image th
 ## Warning
 Depending on the speed you send requests, you will most likely get banned, i was downloading around ~10 images a second and my ip got banned by cloudflare, which shows they have 'some' protection. Obviously you could easily get around it considering its only cloudflare.
 
+
+##Running
+![running the script](https://gifyu.com/image/JxP6)
+
+
