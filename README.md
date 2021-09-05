@@ -19,6 +19,6 @@ Depending on the speed you send requests, you will most likely get banned, i was
 
 
 ##Running  
-![running the script](https://gfycat.com/bluedearcutworm)
+!(https://gfycat.com/bluedearcutworm)
 
 
