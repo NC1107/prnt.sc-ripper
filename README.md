@@ -1,4 +1,10 @@
 # prnt.sc/lightshot scrapper
+[![Github](https://img.shields.io/badge/-Github-000?style=flat&logo=Github&logoColor=white)](https://github.com/NC1107)
+[![Linkedin](https://img.shields.io/badge/-LinkedIn-blue?style=flat&logo=Linkedin&logoColor=white)](https://www.linkedin.com/in/nicholas-conn-41b1b120a/)
+[![Gmail](https://img.shields.io/badge/-Gmail-c14438?style=flat&logo=Gmail&logoColor=white)](mailto:188623nc@gmail.com)
+[![Discord Shield](https://discordapp.com/api/guilds/571556611517317120/widget.png?style=shield)](https://discord.gg/EwQ5HGP)
+
+
 THIS IS FOR EDUCATIONAL PURPOSES, 
 I WILL NOT BE RESPONSIBLE FOR YOUR ACTIONS.
 
