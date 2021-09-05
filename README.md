@@ -19,6 +19,6 @@ Depending on the speed you send requests, you will most likely get banned, i was
 
 
 ##Running  
-!(https://gfycat.com/bluedearcutworm)
+![alt-text](https://gfycat.com/bluedearcutworm)
 
 
