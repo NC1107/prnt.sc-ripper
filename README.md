@@ -98,9 +98,3 @@ Educational Use Only. See [LICENSE](LICENSE) for details.
 ## Responsible Disclosure
 
 If you discover security vulnerabilities while using this tool, report them responsibly to the affected service and allow time for remediation before public disclosure.
-
-## Contact
-
-- GitHub: [@NC1107](https://github.com/NC1107)
-- LinkedIn: [Nicholas Conn](https://www.linkedin.com/in/nicholas-conn-41b1b120a/)
-- Email: 188623nc@gmail.com
