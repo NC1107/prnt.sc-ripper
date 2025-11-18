@@ -145,11 +145,15 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-images/*.png
-images/*.jpg
-images/*.jpeg
-lightshot_research.log
+images/
+logs/
 *.log
+lightshot_research.log
+deleted_urls.txt
 
-# Keep important directories but ignore their contents
-images/.gitkeep
+# WebDriver cache
+.wdm/
+
+# Keep directory structure
+!images/.gitkeep
+!logs/.gitkeep

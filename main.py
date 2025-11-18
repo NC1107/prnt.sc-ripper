@@ -33,6 +33,7 @@ from selenium.common.exceptions import (
     NoSuchElementException,
     WebDriverException,
 )
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class LightShotResearcher:
@@ -47,22 +48,20 @@ class LightShotResearcher:
     ALPHABET = string.ascii_lowercase
     DIGITS = [str(i) for i in range(10)]
 
-    def __init__(
-        self, driver_path: str, output_dir: str = "images", headless: bool = True
-    ):
+    def __init__(self, output_dir: str = "images", headless: bool = True):
         """
         Initialize the LightShot researcher.
 
         Args:
-            driver_path: Path to ChromeDriver executable
             output_dir: Directory to save screenshots
             headless: Run browser in headless mode
         """
-        self.driver_path = driver_path
         self.output_dir = Path(output_dir)
         self.headless = headless
         self.driver: Optional[webdriver.Chrome] = None
         self.session_count = 0
+        self.deleted_list_file = Path("deleted_urls.txt")
+        self.deleted_urls = self._load_deleted_urls()
 
         # Setup logging
         self._setup_logging()
@@ -72,6 +71,19 @@ class LightShotResearcher:
 
         # Initialize WebDriver
         self._initialize_driver()
+
+    def _load_deleted_urls(self) -> set:
+        """Load previously detected deleted URLs from file."""
+        if self.deleted_list_file.exists():
+            with open(self.deleted_list_file, 'r') as f:
+                return set(line.strip() for line in f if line.strip())
+        return set()
+
+    def _add_deleted_url(self, url_code: str) -> None:
+        """Add a URL code to the deleted list file."""
+        self.deleted_urls.add(url_code)
+        with open(self.deleted_list_file, 'a') as f:
+            f.write(f"{url_code}\n")
 
     def _setup_logging(self) -> None:
         """Configure logging for the application."""
@@ -102,7 +114,8 @@ class LightShotResearcher:
                 "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             )
 
-            service = Service(executable_path=self.driver_path)
+            # Use webdriver-manager to automatically download and manage ChromeDriver
+            service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.driver.set_page_load_timeout(10)
 
@@ -137,54 +150,81 @@ class LightShotResearcher:
         Returns:
             Tuple of (success, message)
         """
+        # Skip if already in deleted list
+        if url_code in self.deleted_urls:
+            return False, "Skipped (previously deleted)"
+
         url = f"{self.BASE_URL}{url_code}"
         output_path = self.output_dir / f"{url_code}.png"
 
         try:
             self.driver.get(url)
+            
+            # Give the page a moment to load
+            time.sleep(0.5)
 
-            # Wait for page to load and try multiple selectors
-            wait = WebDriverWait(self.driver, 5)
+            # Look for the screenshot image element
+            try:
+                image_element = WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.ID, "screenshot-image"))
+                )
+            except TimeoutException:
+                return False, "No screenshot found"
 
-            # Try different selectors for LightShot's changing page structure
-            selectors = [
-                ".screenshot-image",
-                "#screenshot-image",
-                ".image",
-                "img[src*='image']",
-                ".image-container img",
-                ".no-click",
-                "#screenshot img",
-            ]
+            # Check the image source URL
+            src = image_element.get_attribute("src")
+            if not src:
+                return False, "No image source"
 
-            image_element = None
-            for selector in selectors:
-                try:
-                    image_element = wait.until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    break
-                except TimeoutException:
-                    continue
+            # The removed placeholder image has a specific pattern in the URL
+            # Example: //st.prntscr.com/2023/07/24/0635/img/0_173a7b_211be8ff.png
+            # This is the "screenshot was removed" placeholder
+            if "/img/0_" in src and "_" in src:
+                # This is the removed placeholder pattern
+                self._add_deleted_url(url_code)
+                return False, "Screenshot removed/deleted"
 
-            if image_element is None:
-                # If no specific element found, try to screenshot the main content area
-                try:
-                    image_element = self.driver.find_element(By.TAG_NAME, "body")
-                except NoSuchElementException:
-                    return False, f"No image element found at {url}"
+            # Check the alt text
+            alt_text = image_element.get_attribute("alt")
+            if alt_text and "removed" in alt_text.lower():
+                self._add_deleted_url(url_code)
+                return False, "Screenshot removed/deleted"
+
+            # Get image dimensions to check if it's the tiny removed placeholder
+            try:
+                width = image_element.get_attribute("naturalWidth")
+                height = image_element.get_attribute("naturalHeight")
+                
+                # The removed placeholder is typically very small
+                if width and height:
+                    width_int = int(width) if width.isdigit() else 0
+                    height_int = int(height) if height.isdigit() else 0
+                    
+                    if width_int < 100 or height_int < 100:
+                        self._add_deleted_url(url_code)
+                        return False, "Screenshot removed/deleted (small placeholder)"
+            except:
+                pass
 
             # Take screenshot of the specific element
             if image_element.screenshot(str(output_path)):
-                self.session_count += 1
-                return True, f"Screenshot saved: {output_path}"
+                # Verify file was created and has reasonable size
+                if output_path.exists() and output_path.stat().st_size > 5000:  # At least 5KB for real screenshots
+                    self.session_count += 1
+                    return True, f"Screenshot saved: {output_path}"
+                else:
+                    # Delete small/invalid file
+                    if output_path.exists():
+                        output_path.unlink()
+                    self._add_deleted_url(url_code)
+                    return False, "Screenshot too small (likely removed)"
             else:
                 return False, "Failed to save screenshot"
 
         except TimeoutException:
-            return False, f"Timeout loading {url}"
+            return False, "Timeout loading page"
         except NoSuchElementException:
-            return False, f"Image not found at {url}"
+            return False, "Image not found"
         except WebDriverException as e:
             return False, f"WebDriver error: {e}"
         except Exception as e:
@@ -202,8 +242,10 @@ class LightShotResearcher:
         """
         self.logger.info(f"Starting research with max {max_attempts} attempts")
         self.logger.info(f"Delay between requests: {delay} seconds")
+        self.logger.info(f"Loaded {len(self.deleted_urls)} previously deleted URLs")
 
         successful_captures = 0
+        skipped_count = 0
 
         try:
             for i, url_code in enumerate(self._generate_url_codes()):
@@ -215,6 +257,8 @@ class LightShotResearcher:
                 if success:
                     successful_captures += 1
                     self.logger.info(f"Success ({successful_captures}): {message}")
+                elif "Skipped (previously deleted)" in message:
+                    skipped_count += 1
                 else:
                     self.logger.debug(f"Failed: {message}")
 
@@ -222,7 +266,7 @@ class LightShotResearcher:
                 if (i + 1) % 100 == 0:
                     self.logger.info(
                         f"Progress: {i + 1}/{max_attempts} attempts, "
-                        f"{successful_captures} successful captures"
+                        f"{successful_captures} successful, {skipped_count} skipped"
                     )
 
                 # Respectful delay to avoid overwhelming the server
@@ -234,7 +278,8 @@ class LightShotResearcher:
             self.logger.error(f"Research failed: {e}")
         finally:
             self.logger.info(
-                f"Research completed. Total successful captures: {successful_captures}"
+                f"Research completed. Successful: {successful_captures}, "
+                f"Skipped: {skipped_count}, Total deleted: {len(self.deleted_urls)}"
             )
 
     def cleanup(self) -> None:
@@ -252,12 +297,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="LightShot Security Research Tool",
         epilog="DISCLAIMER: For educational and research purposes only!",
-    )
-
-    parser.add_argument(
-        "--driver-path",
-        default="driver/chromedriver_win32 (1)/chromedriver.exe",
-        help="Path to ChromeDriver executable",
     )
 
     parser.add_argument(
@@ -283,15 +322,9 @@ def main():
 
     args = parser.parse_args()
 
-    # Validate driver path
-    if not os.path.exists(args.driver_path):
-        print(f"Error: ChromeDriver not found at {args.driver_path}")
-        sys.exit(1)
-
     researcher = None
     try:
         researcher = LightShotResearcher(
-            driver_path=args.driver_path,
             output_dir=args.output_dir,
             headless=not args.visible,
         )
