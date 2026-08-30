@@ -9,7 +9,7 @@
 A security research tool that demonstrates vulnerabilities in LightShot's URL structure by exploring predictable URL patterns.
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Educational%20Use%20Only-red)](LICENSE)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
 
 ## Overview
 
@@ -99,7 +99,13 @@ Contributions are welcome. Please fork the repository and submit a pull request 
 
 ## License
 
-Educational Use Only. See [LICENSE](LICENSE) for details.
+[PolyForm Noncommercial 1.0.0](LICENSE).
+
+Free for noncommercial use: personal, hobby, educational, research, nonprofit, and all that.
+You can fork it, change it and redistribute it, you just can't sell it or use it commercially without asking first.
+If you want to use it commercially, open an issue and ask.
+
+Contributions are welcome. By submitting a pull request you agree that your changes are released under this same license.
 
 ## Responsible Disclosure
 
